@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>D&D Timer</title>
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.10/css/all.css" integrity="sha384-+d0P83n9kaQMCwj8F4RJB66tzIwOKmrdb46+porD/OvrJ+37WqIM7UoBtwHO6Nlg"
+    crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:400,900" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.5.2/animate.min.css">
+  <style>
+    :root {
+      --safe: smokewhite;
+      --warning: #FFEC47;
+      --alert: #DA5552;
+      --go: #52da7f;
+    }
+
+    body {
+      background: var(--safe);
+      color: #19334e;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      height: 100vh;
+      margin: 0;
+      font-family: 'Roboto', sans-serif;
+      font-weight: 400;
+      overflow-y: hidden;
+      font-size: 30px;
+    }
+
+    .Timer {
+      max-width: 50vw;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+
+    .Timer-players {
+      display: flex;
+      align-items: center;
+    }
+
+    .Timer-player-action {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .Timer-current-player {
+      color: var(--alert);
+      font-size: 2.5em;
+      margin: 0;
+      align-self: flex-start;
+    }
+
+    .Timer-time {
+      font-size: 50vw;
+      margin: 0;
+      font-weight: 900;
+    }
+
+    .Timer-list {
+      list-style: none;
+      font-size: 1em;
+    }
+
+    .Timer-list-next {
+      opacity: 1;
+      font-weight: bold;
+    }
+
+    .Timer-list li:nth-of-type(2n) {
+      opacity: 0.3;
+    }
+
+    .Timer-list li:nth-of-type(3n) {
+      opacity: 0.1;
+    }
+
+    .Timer-action {
+      font-size: 1.2em;
+    }
+
+    button {
+      border: none;
+      cursor: pointer;
+      animation-name: fadeIn;
+      background: none;
+    }
+
+    .Timer-nextUp {
+      border: 3px solid var(--go);
+      font-size: 0.6em;
+    }
+
+    /* Setting Players */
+
+    .Set-players {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 2;
+    }
+
+    .Set-players:before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: whitesmoke;
+      filter: blur(0.5px) opacity(0.96);
+      z-index: -1;
+    }
+
+    /* Player form */
+    .close {
+      font-size: 1.3em;
+      align-self: flex-end;
+    }
+
+    @media screen and (min-width:1100px) {
+      .Timer-time {
+        font-size: 25vw;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <section class="Timer">
+      <div class="Timer-players">
+        <div class="Timer-players-action">
+          <div class="Timer-action">
+            <button @click="beginTimer" v-bind:disabled="disabled" autofocus>
+              <i class="fas fa-play"></i>
+            </button>
+            <button @click="stopTimer">
+              <i class="fas fa-pause"></i>
+            </button>
+            <button @click="showing = !showing">
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
+          <h3 class="Timer-current-player">{{defaultPlayers[currentPlayer].name}}</h3>
+          <button class="Timer-nextUp" @click="next()">Next Player</button>
+          <audio></audio>
+        </div>
+        <ul class="Timer-list">
+          <li class="Timer-list-next">{{defaultPlayers[nextPlayer].name}}</li>
+          <li>Foo</li>
+          <li>Bar</li>
+          <!-- <li v-for="player in defaultPlayers">{{player.name}}</li> -->
+        </ul>
+      </div>
+      <h1 class="Timer-time">
+        <span class="seconds">{{startingTime}}</span>s</h1>
+    </section>
+
+
+    <section v-show="showing" class="Set-players animated bounceInDown">
+      <button @click="showing = !showing" class="close">
+        <i class="fas fa-times"></i>
+      </button>
+      <form @submit.prevent="playerOrder()">
+        <table>
+          <th>
+            <tr>
+              <td>
+                <h4>Players</h4>
+              </td>
+              <td>
+                <h4>Position</h4>
+              </td>
+            </tr>
+          </th>
+          <tbody>
+            <tr v-for="player in defaultPlayers">
+              <td>{{player.name}}</td>
+              <td>
+                <input type="text" :name="player.name" :placeholder="player.position" ref="player_order" :value="player.position*2">
+              </td>
+              <td>
+                <button @click.prevent="removePlayer(player)">
+                  <i class="fas fa-times"></i>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <button>Submit Change</button>
+      </form>
+      <input type="text" placeholder="Add a player" v-model="player">
+      <button @click.prevent="addPlayer">Add</button>
+      </form>
+    </section>
+  </div>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.5.16/dist/vue.js"></script>
+  <script>
+    new Vue( {
+      el: "#app",
+      data: {
+        startingTime: 30,
+        timerRunning: false,
+        showing: true,
+        disabled: false,
+        player: "",
+        currentPlayer: 0,
+        nextPlayer: 1,
+        defaultPlayers: [
+          { name: 'Fisty', position: 0, disabled: false }, { name: 'Buldrick', position: 1, disabled: false }, { name: 'Ducky', position: 2, disabled: false }, { name: 'Tumutch', position: 3, disabled: false }, { name: 'Mayonez', position: 4, disabled: false }, { name: 'Hiro', position: 5, disabled: false }, { name: 'Dug', position: 6, disabled: false }, { name: 'Pankas', position: 7, disabled: false }],
+      },
+      methods: {
+        beginTimer() {
+          let timerTime = document.querySelector( ".Timer-time" ),
+            audio = document.querySelector( "audio" );
+          let setter = setInterval( () => begin(), 1000 );
+          this.startingTime = 30;
+          this.disabled = true;
+
+          let begin = () => {
+            time = --this.startingTime;
+
+            if ( time === 15 ) {
+              timerTime.className += " animated wobble";
+              audio.src = "https://s3.amazonaws.com/dndtimer/ehhh.mp3";
+              audio.play();
+            }
+
+            if ( time === 0 ) {
+              timerTime.className += " hinge";
+              audio.src = "https://s3.amazonaws.com/dndtimer/stop.wav";
+              audio.play();
+              clearInterval( setter )
+              this.disabled = false;
+            }
+
+            setTimeout( () => {
+              timerTime.className = "Timer-time";
+            }, 33000 );
+          }
+        },
+        stopTimer() {
+          console.log( 'paused' );
+        },
+        next() {
+          let { defaultPlayers, currentPlayer, nextPlayer } = this;
+          this.currentPlayer = this.currentPlayer + 1
+          this.nextPlayer = this.nextPlayer + 1;
+          this.beginTimer();
+        },
+        addPlayer() {
+          const newPLayer = {
+            name: this.player,
+            position: this.defaultPlayers.length,
+            disabled: false
+          };
+          this.defaultPlayers.push( newPLayer );
+          this.player = "";
+        },
+        removePlayer(player) {
+          console.log(player);
+          this.defaultPlayers.splice(player.position, 1);
+        },
+        playerOrder() {
+          console.log( this.$refs.player_order );
+          this.$refs.player_order.map( info => console.log( `${info.name}: ${info.value}` ) );
+        }
+      }
+    } )
+
+  </script>
+</body>
+
+</html>
